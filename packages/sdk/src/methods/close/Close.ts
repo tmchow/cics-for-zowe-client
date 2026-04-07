@@ -62,4 +62,4 @@ export async function closeLocalFile(session: AbstractSession, parms: ILocalFile
   return CicsCmciRestClient.putExpectParsedXml(session, cmciResource, [], requestBody);
 }
 
-// Made with Bob
+

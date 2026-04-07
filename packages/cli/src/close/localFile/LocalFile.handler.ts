@@ -44,5 +44,3 @@ export default class LocalFileHandler extends CicsBaseHandler {
     return response;
   }
 }
-
-// Made with Bob

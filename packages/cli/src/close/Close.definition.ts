@@ -25,4 +25,4 @@ export const CloseDefinition: ICommandDefinition = {
   children: [LocalFileDefinition],
 };
 
-// Made with Bob
+

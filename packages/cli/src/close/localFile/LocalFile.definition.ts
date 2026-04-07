@@ -63,5 +63,3 @@ export const LocalFileDefinition: ICommandDefinition = {
     },
   ],
 };
-
-// Made with Bob

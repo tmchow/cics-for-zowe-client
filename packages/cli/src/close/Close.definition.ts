@@ -16,7 +16,7 @@ import type i18nTypings from "../-strings-/en";
 
 const strings = (require("../-strings-/en").default as typeof i18nTypings).CLOSE;
 
-export const CloseDefinition: ICommandDefinition = {
+const definition: ICommandDefinition = {
   name: "close",
   aliases: ["cls"],
   summary: strings.SUMMARY,
@@ -24,5 +24,5 @@ export const CloseDefinition: ICommandDefinition = {
   type: "group",
   children: [LocalFileDefinition],
 };
-
+export = definition;
 

@@ -161,7 +161,7 @@ test.describe("Resource Inspector tests", async () => {
     // If there are job spool links, verify they are clickable
     if (linkCount > 0) {
       await expect(jobSpoolLinks.first()).toBeVisible();
-      await expect(jobSpoolLinks.first()).toHaveClass(/underline/);
+      await expect(jobSpoolLinks.first()).toHaveClass(/(^|\s)underline(\s|$)/);
     }
   });
 
@@ -186,7 +186,7 @@ test.describe("Resource Inspector tests", async () => {
     // Dataset links should only appear if Zowe Explorer commands are available
     if (linkCount > 0) {
       await expect(datasetLinks.first()).toBeVisible();
-      await expect(datasetLinks.first()).toHaveClass(/underline/);
+      await expect(datasetLinks.first()).toHaveClass(/(^|\s)underline(\s|$)/);
     }
   });
 

@@ -15,6 +15,7 @@ import {
   findAndClickText,
   findAndClickTreeItem,
   getResourceInspector,
+  getTreeItem,
   prepareZoweExplorerView,
   resetWiremock,
   resetZoweExplorerView,
@@ -140,7 +141,7 @@ test.describe("Resource Inspector tests", async () => {
     await expect(getResourceInspector(page).locator("input").first()).toHaveValue("");
   });
 
-  test("should display hyperlinks for job spool patterns (//DD:*)", async ({ page }) => {
+  test("should display dataset hyperlinks and navigate to Data Sets view", async ({ page }) => {
     await findAndClickTreeItem(page, constants.PROFILE_NAME);
     await findAndClickTreeItem(page, constants.CICSPLEX_NAME);
     await findAndClickTreeItem(page, constants.REGION_NAME);
@@ -154,40 +155,88 @@ test.describe("Resource Inspector tests", async () => {
     await waitForNotification(page, `Loading CICS resource '${constants.PROGRAM_1_NAME}'...`);
     await getResourceInspector(page).getByText(`${constants.PROGRAM_1_NAME}(Program)`).waitFor();
 
-    // Check if any //DD:* patterns are rendered as hyperlinks
-    const jobSpoolLinks = getResourceInspector(page).locator('a[href="javascript:void(0)"]').filter({ hasText: /^\/\/DD:/ });
-    const linkCount = await jobSpoolLinks.count();
-    
-    // If there are job spool links, verify they are clickable
-    if (linkCount > 0) {
-      await expect(jobSpoolLinks.first()).toBeVisible();
-      await expect(jobSpoolLinks.first()).toHaveClass(/(^|\s)underline(\s|$)/);
+    // Filter to show librarydsn attribute
+    await getResourceInspector(page).locator("input").first().fill("librarydsn");
+    await page.waitForTimeout(200);
+
+    // Verify that MYLIBDS1 is rendered as a hyperlink
+    const datasetLink = getResourceInspector(page).getByRole("cell", { name: "MYLIBDS1" }).getByRole("link");
+    await expect(datasetLink).toBeVisible();
+    await expect(datasetLink).toHaveClass(/(^|\s)underline(\s|$)/);
+
+    // Click the dataset link
+    await datasetLink.click();
+    await page.waitForTimeout(500);
+
+    // Verify navigation to Data Sets tree
+    const dataSetsTree = page.getByRole("button", { name: "Data Sets Section", exact: true });
+    if (await dataSetsTree.isVisible()) {
+      const isExpanded = (await dataSetsTree.getAttribute("aria-expanded")) === "true";
+      if (!isExpanded) {
+        await dataSetsTree.click();
+        await page.waitForTimeout(500);
+      }
     }
+
+    // Verify the z/OSMF profile appears in Data Sets tree
+    const zosmfProfileItem = getTreeItem(page, constants.ZOSMF_PROFILE_NAME, false);
+    await expect(zosmfProfileItem).toBeVisible();
+
+    // Verify the dataset appears in the tree
+    await zosmfProfileItem.click();
+    await page.waitForTimeout(500);
+    const datasetItem = getTreeItem(page, "MYLIBDS1", false);
+    await expect(datasetItem).toBeVisible();
   });
 
-  test("should display dataset hyperlinks when Zowe Explorer is available", async ({ page }) => {
+  test("should display USS path hyperlinks and navigate to USS view", async ({ page }) => {
     await findAndClickTreeItem(page, constants.PROFILE_NAME);
     await findAndClickTreeItem(page, constants.CICSPLEX_NAME);
     await findAndClickTreeItem(page, constants.REGION_NAME);
-    await findAndClickTreeItem(page, "Libraries");
+    await findAndClickTreeItem(page, "Bundles");
 
-    await findAndClickTreeItem(page, constants.LIBRARY_1_NAME);
-    await findAndClickTreeItem(page, constants.LIBRARY_1_NAME, "right", false);
+    await findAndClickTreeItem(page, constants.BUNDLE_1_NAME);
+    await findAndClickTreeItem(page, constants.BUNDLE_1_NAME, "right", false);
     await page.waitForTimeout(200);
     await findAndClickText(page, "Inspect Resource");
 
-    await waitForNotification(page, `Loading CICS resource '${constants.LIBRARY_1_NAME}'...`);
-    await getResourceInspector(page).getByText(`${constants.LIBRARY_1_NAME}(Library)`).waitFor();
+    await waitForNotification(page, `Loading CICS resource '${constants.BUNDLE_1_NAME}'...`);
+    await getResourceInspector(page).getByText(`${constants.BUNDLE_1_NAME}(Bundle)`).waitFor();
 
-    // Check if dataset names are rendered as hyperlinks (if Zowe Explorer is available)
-    const datasetLinks = getResourceInspector(page).locator('a[href="javascript:void(0)"]').filter({ hasText: /^[A-Z@#$][A-Z0-9@#$\-]{0,7}(\.[A-Z@#$][A-Z0-9@#$\-]{0,7})+/ });
-    const linkCount = await datasetLinks.count();
-    
-    // Dataset links should only appear if Zowe Explorer commands are available
-    if (linkCount > 0) {
-      await expect(datasetLinks.first()).toBeVisible();
-      await expect(datasetLinks.first()).toHaveClass(/(^|\s)underline(\s|$)/);
+    // Filter to show bundledir attribute
+    await getResourceInspector(page).locator("input").first().fill("bundledir");
+    await page.waitForTimeout(200);
+
+    // Verify that USS path is rendered as a hyperlink
+    const ussPathLink = getResourceInspector(page)
+      .getByRole("cell", { name: constants.BUNDLE_1_USS_PATH })
+      .getByRole("link");
+    await expect(ussPathLink).toBeVisible();
+    await expect(ussPathLink).toHaveClass(/(^|\s)underline(\s|$)/);
+
+    // Click the USS path link
+    await ussPathLink.click();
+    await page.waitForTimeout(500);
+
+    // Verify navigation to USS tree
+    const ussTree = page.getByRole("button", { name: "Unix System Services (USS) Section", exact: true });
+    if (await ussTree.isVisible()) {
+      const isExpanded = (await ussTree.getAttribute("aria-expanded")) === "true";
+      if (!isExpanded) {
+        await ussTree.click();
+        await page.waitForTimeout(500);
+      }
     }
+
+    // Verify the z/OSMF profile appears in USS tree
+    const zosmfProfileItem = getTreeItem(page, constants.ZOSMF_PROFILE_NAME, false);
+    await expect(zosmfProfileItem).toBeVisible();
+
+    // Verify the USS path appears in the tree
+    await zosmfProfileItem.click();
+    await page.waitForTimeout(500);
+    const ussPathItem = getTreeItem(page, constants.BUNDLE_1_USS_PATH, false);
+    await expect(ussPathItem).toBeVisible();
   });
 
   test("should display highlights section with proper formatting", async ({ page }) => {

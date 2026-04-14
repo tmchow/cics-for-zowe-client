@@ -28,6 +28,8 @@ const JOB_SPOOL_PATTERNS: RegExp[] = [JOB_SPOOL_PATTERN];
 
 const DATASET_PATTERNS: RegExp[] = [DATASET_PATTERN];
 
+const USS_PATH_PATTERNS: RegExp[] = [USS_PATH_PATTERN];
+
 /**
  * @param value - The string value to check
  * @returns true if the value matches a dataset pattern, false otherwise
@@ -41,7 +43,7 @@ export const isDatasetValue = (value: string): boolean => {
  * @param value - The string value to check
  * @returns true if the value matches a job spool pattern, false otherwise
  */
-export const isHyperlinkableValue = (value: string): boolean => {
+export const isJobSpoolValue = (value: string): boolean => {
   return JOB_SPOOL_PATTERNS.some((pattern) => pattern.test(value));
 };
 
@@ -51,7 +53,7 @@ export const isHyperlinkableValue = (value: string): boolean => {
  * @returns true if the value matches a USS file path pattern, false otherwise
  */
 export const isUssPathValue = (value: string): boolean => {
-  return USS_PATH_PATTERN.test(value);
+  return USS_PATH_PATTERNS.some((pattern) => pattern.test(value));
 };
 
 /**
@@ -75,7 +77,7 @@ const createHyperlink = (value: string, onClick: (e: React.MouseEvent) => void) 
  */
 export const renderHyperlinkableValue = (value: string, ctx: IResourceContext, shouldRenderZoweExplorerLinks: boolean = false) => {
   // Check for job spool pattern (//DD:*)
-  if (isHyperlinkableValue(value)) {
+  if (isJobSpoolValue(value)) {
     return createHyperlink(value, (e) => {
       e.preventDefault();
       postVscMessage({

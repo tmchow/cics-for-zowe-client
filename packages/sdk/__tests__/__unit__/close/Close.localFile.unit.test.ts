@@ -65,6 +65,19 @@ describe("CMCI - Close local file", () => {
       expect(error).toBeDefined();
       expect(error.message).toContain("CICS local file name is required");
     });
+
+    it("should throw an error if invalid BUSY parameter is specified", async () => {
+      closeParms.busy = "INVALID";
+      try {
+        response = await closeLocalFile(dummySession, closeParms);
+      } catch (err) {
+        error = err;
+      }
+      expect(response).toBeUndefined();
+      expect(error).toBeDefined();
+      expect(error.message).toContain("Invalid BUSY parameter value");
+      expect(error.message).toContain("WAIT, NOWAIT, FORCE");
+    });
   });
 
   describe("success scenarios", () => {

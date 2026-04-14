@@ -21,6 +21,12 @@ import type { CICSResourceContainerNode } from "../trees/CICSResourceContainerNo
 import { findSelectedNodes } from "../utils/commandUtils";
 import { evaluateTreeNodes } from "../utils/treeUtils";
 
+/**
+ * Registers the command to close CICS local files from the VS Code tree view
+ * @param tree - The CICS tree to refresh after closing
+ * @param treeview - The tree view containing selected nodes
+ * @returns Disposable command registration
+ */
 export function getCloseLocalFileCommand(tree: CICSTree, treeview: TreeView<any>) {
   return commands.registerCommand("cics-extension-for-zowe.closeLocalFile", async (clickedNode) => {
     const nodes = findSelectedNodes(treeview, LocalFileMeta, clickedNode);
@@ -35,15 +41,15 @@ export function getCloseLocalFileCommand(tree: CICSTree, treeview: TreeView<any>
       [l10n.t("Force")]: "FORCE",
     };
 
-    const picked = await window.showInformationMessage(
+    const selectedBusyOption = await window.showInformationMessage(
       l10n.t("Choose one of the following for the file busy condition"),
       ...Object.keys(busyChoices)
     );
-    if (!picked) {
+    if (!selectedBusyOption) {
       return;
     }
 
-    const busyDecision = busyChoices[picked] ?? "WAIT";
+    const busyDecision = busyChoices[selectedBusyOption];
 
     await window.withProgress(
       {
@@ -55,6 +61,7 @@ export function getCloseLocalFileCommand(tree: CICSTree, treeview: TreeView<any>
         token.onCancellationRequested(() => {});
 
         const nodesToRefresh = new Set();
+        const errors: Array<{ node: CICSResourceContainerNode<ILocalFile>; error: any }> = [];
 
         for (let i = 0; i < nodes.length; i++) {
           const node = nodes[i] as CICSResourceContainerNode<ILocalFile>;
@@ -77,12 +84,24 @@ export function getCloseLocalFileCommand(tree: CICSTree, treeview: TreeView<any>
             nodesToRefresh.add(node.getParent());
             evaluateTreeNodes(node, response, node.getContainedResource().meta);
           } catch (error) {
+            errors.push({ node, error });
             CICSErrorHandler.handleCMCIRestError(error);
           }
         }
+
         nodesToRefresh.forEach((v) => {
           tree.refresh(v);
         });
+
+        // Show summary if there were any errors
+        if (errors.length > 0) {
+          const successCount = nodes.length - errors.length;
+          const errorMessage =
+            errors.length === nodes.length
+              ? l10n.t("Failed to close all {0} local file(s)", nodes.length)
+              : l10n.t("Closed {0} of {1} local file(s). {2} failed.", successCount, nodes.length, errors.length);
+          window.showWarningMessage(errorMessage);
+        }
       }
     );
   });

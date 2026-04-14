@@ -185,6 +185,11 @@ export const CicsCmciConstants = {
   CICS_CMCI_LOCAL_FILE: "CICSLocalFile",
 
   /**
+   * The criteria field name for local file resources
+   */
+  CICS_LOCAL_FILE_CRITERIA_FIELD: "FILE",
+
+  /**
    * The CICS CMCI remote file
    */
   CICS_CMCI_REMOTE_FILE: "CICSRemoteFile",

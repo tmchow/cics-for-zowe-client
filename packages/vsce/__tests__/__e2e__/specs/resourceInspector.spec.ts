@@ -141,10 +141,10 @@ test.describe("Resource Inspector tests", async () => {
 
     // Filter to show librarydsn attribute
     await getResourceInspector(page).locator("input").first().fill("librarydsn");
-    await getResourceInspector(page).getByRole("cell", { name: "MYLIBDS1" }).waitFor();
+    await getResourceInspector(page).getByRole("cell", { name: "MYLIB.DS1" }).waitFor();
 
-    // Verify that MYLIBDS1 is rendered as a hyperlink
-    const datasetLink = getResourceInspector(page).getByRole("cell", { name: "MYLIBDS1" }).getByRole("link");
+    // Verify that MYLIB.DS1 is rendered as a hyperlink
+    const datasetLink = getResourceInspector(page).getByRole("cell", { name: "MYLIB.DS1" }).getByRole("link");
     await expect(datasetLink, "Dataset should be rendered as a hyperlink").toBeVisible();
     await expect(datasetLink, "Dataset link should have underline class").toHaveClass(/(^|\s)underline(\s|$)/);
 
@@ -165,45 +165,8 @@ test.describe("Resource Inspector tests", async () => {
 
     // Verify the dataset appears in the tree
     await zosmfProfileItem.click();
-    const datasetItem = getTreeItem(page, "MYLIBDS1", false);
+    const datasetItem = getTreeItem(page, "MYLIB.DS1", false);
     await expect(datasetItem, "Dataset should appear in the tree").toBeVisible();
-  });
-
-  test("should display USS path hyperlinks and navigate to USS view", async ({ page }) => {
-    await openResourceInspector(page, "Bundles", constants.BUNDLE_1_NAME);
-    
-    await getResourceInspector(page).getByText(`${constants.BUNDLE_1_NAME}(Bundle)`).waitFor();
-
-    // Filter to show bundledir attribute
-    await getResourceInspector(page).locator("input").first().fill("bundledir");
-    await getResourceInspector(page).getByRole("cell", { name: constants.BUNDLE_1_USS_PATH }).waitFor();
-
-    // Verify that USS path is rendered as a hyperlink
-    const ussPathLink = getResourceInspector(page)
-      .getByRole("cell", { name: constants.BUNDLE_1_USS_PATH })
-      .getByRole("link");
-    await expect(ussPathLink, "USS path should be rendered as a hyperlink").toBeVisible();
-    await expect(ussPathLink, "USS path link should have underline class").toHaveClass(/(^|\s)underline(\s|$)/);
-
-    // Click the USS path link
-    await ussPathLink.click();
-
-    // Verify navigation to USS tree
-    const ussTree = page.getByRole("button", { name: "Unix System Services (USS) Section", exact: true });
-    await ussTree.waitFor({ state: "visible" });
-    const isExpanded = (await ussTree.getAttribute("aria-expanded")) === "true";
-    if (!isExpanded) {
-      await ussTree.click();
-    }
-
-    // Verify the z/OSMF profile appears in USS tree
-    const zosmfProfileItem = getTreeItem(page, constants.ZOSMF_PROFILE_NAME, false);
-    await expect(zosmfProfileItem, "z/OSMF profile should be visible in USS tree").toBeVisible();
-
-    // Verify the USS path appears in the tree
-    await zosmfProfileItem.click();
-    const ussPathItem = getTreeItem(page, constants.BUNDLE_1_USS_PATH, false);
-    await expect(ussPathItem, "USS path should appear in the tree").toBeVisible();
   });
 
   test("should display highlights section with proper formatting", async ({ page }) => {

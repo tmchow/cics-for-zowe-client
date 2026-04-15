@@ -10,7 +10,7 @@
  */
 
 import { CicsCmciConstants, getCICSProfileDefinition } from "@zowe/cics-for-zowe-sdk";
-import { Gui, MessageSeverity, ZoweVsCodeExtension, imperative } from "@zowe/zowe-explorer-api";
+import { Gui, MessageSeverity, ZoweVsCodeExtension, imperative, type IApiExplorerExtender } from "@zowe/zowe-explorer-api";
 import { ProfileManagement } from "../../../src/utils/profileManagement";
 import { CICSExtensionError } from "../../../src/errors/CICSExtensionError";
 import * as resourceUtils from "../../../src/utils/resourceUtils";
@@ -22,10 +22,19 @@ jest.mock("@zowe/cics-for-zowe-sdk");
 jest.mock("../../../src/utils/resourceUtils");
 jest.mock("../../../src/utils/plexUtils");
 
+interface MockZoweAPI {
+  getExplorerExtenderApi: jest.Mock;
+}
+
+interface MockProfilesCache {
+  refresh: jest.Mock;
+  getProfileInfo: jest.Mock;
+}
+
 describe("ProfileManagement", () => {
   let mockProfile: imperative.IProfileLoaded;
-  let mockZoweAPI: any;
-  let mockProfilesCache: any;
+  let mockZoweAPI: MockZoweAPI;
+  let mockProfilesCache: MockProfilesCache;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -113,9 +122,11 @@ describe("ProfileManagement", () => {
       };
       
       // Spy on getProfilesCache to return our mock cache
-      const getProfilesCacheSpy = jest.spyOn(ProfileManagement, 'getProfilesCache').mockReturnValue(mockCache as any);
+      // @ts-expect-error - Partial mock for testing, only includes methods used in this test
+      const getProfilesCacheSpy = jest.spyOn(ProfileManagement, 'getProfilesCache').mockReturnValue(mockCache);
       
       // Spy on getExplorerApis to return mockZoweAPI
+      // @ts-expect-error - Partial mock for testing, only includes methods used in this test
       const getExplorerApisSpy = jest.spyOn(ProfileManagement, 'getExplorerApis').mockReturnValue(mockZoweAPI);
       
       await ProfileManagement.profilesCacheRefresh();
@@ -172,7 +183,7 @@ describe("ProfileManagement", () => {
           code: "ECONNREFUSED",
           message: "Connection refused",
         },
-      } as any;
+      } as imperative.RestClientError;
 
       const result = ProfileManagement.formatRestClientError(error);
 
@@ -184,7 +195,7 @@ describe("ProfileManagement", () => {
         causeErrors: {
           message: "Connection refused",
         },
-      } as any;
+      } as imperative.RestClientError;
 
       const result = ProfileManagement.formatRestClientError(error);
 
@@ -713,7 +724,8 @@ describe("ProfileManagement", () => {
         },
       });
 
-      const result = await ProfileManagement.getRegionInfoInPlex(mockPlex as any);
+      // @ts-expect-error - Partial mock for testing, only includes methods used in this test
+      const result = await ProfileManagement.getRegionInfoInPlex(mockPlex);
 
       expect(mockPlex.getPlexName).toHaveBeenCalled();
       expect(mockPlex.getProfile).toHaveBeenCalled();

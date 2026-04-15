@@ -428,7 +428,7 @@ describe("pollForCompleteAction", () => {
     const isCompletionCriteriaMet = jest.fn().mockReturnValue(true);
     const criteriaMetCallback = jest.fn();
 
-    await pollForCompleteAction(mockNode as any, isCompletionCriteriaMet, criteriaMetCallback);
+    await pollForCompleteAction(mockNode, isCompletionCriteriaMet, criteriaMetCallback);
 
     expect(isCompletionCriteriaMet).toHaveBeenCalled();
     expect(criteriaMetCallback).toHaveBeenCalled();
@@ -456,7 +456,7 @@ describe("pollForCompleteAction", () => {
       .mockReturnValueOnce(true);
     const criteriaMetCallback = jest.fn();
 
-    await pollForCompleteAction(mockNode as any, isCompletionCriteriaMet, criteriaMetCallback);
+    await pollForCompleteAction(mockNode, isCompletionCriteriaMet, criteriaMetCallback);
 
     expect(isCompletionCriteriaMet).toHaveBeenCalledTimes(3);
     expect(criteriaMetCallback).toHaveBeenCalled();
@@ -471,7 +471,7 @@ describe("pollForCompleteAction", () => {
         meta: {
           resourceName: "MYRES",
           getName: () => "TESTPROG",
-          buildCriteria: (names: string[], parent: any) => {
+          buildCriteria: (names: string[], parent: unknown) => {
             expect(parent).toBe(parentResource);
             return "PROGRAM=TESTPROG";
           },
@@ -485,7 +485,7 @@ describe("pollForCompleteAction", () => {
     const isCompletionCriteriaMet = jest.fn().mockReturnValue(true);
     const criteriaMetCallback = jest.fn();
 
-    await pollForCompleteAction(mockNode as any, isCompletionCriteriaMet, criteriaMetCallback, parentResource as any);
+    await pollForCompleteAction(mockNode, isCompletionCriteriaMet, criteriaMetCallback, parentResource);
 
     expect(criteriaMetCallback).toHaveBeenCalled();
   });

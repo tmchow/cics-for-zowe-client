@@ -10,7 +10,7 @@
  */
 
 import { window } from "vscode";
-import { ZoweVsCodeExtension } from "@zowe/zowe-explorer-api";
+import { ZoweVsCodeExtension, type imperative } from "@zowe/zowe-explorer-api";
 import {
   missingSessionParameters,
   missingUsernamePassword,
@@ -24,9 +24,13 @@ jest.mock("vscode");
 jest.mock("@zowe/zowe-explorer-api");
 jest.mock("../../../src/utils/profileManagement");
 
+interface MockSessionTree {
+  getIsUnauthorized: jest.Mock;
+}
+
 describe("profileUtils", () => {
-  let mockProfile: any;
-  let mockSessionTree: any;
+  let mockProfile: imperative.IProfileLoaded;
+  let mockSessionTree: MockSessionTree;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -45,39 +49,39 @@ describe("profileUtils", () => {
     });
 
     it("should return missing host parameter", () => {
-      delete mockProfile.profile.host;
+      delete mockProfile.profile!.host;
       const result = missingSessionParameters(mockProfile.profile);
       expect(result).toContain("host");
     });
 
     it("should return missing port parameter", () => {
-      delete mockProfile.profile.port;
+      delete mockProfile.profile!.port;
       const result = missingSessionParameters(mockProfile.profile);
       expect(result).toContain("port");
     });
 
     it("should return missing user parameter", () => {
-      delete mockProfile.profile.user;
+      delete mockProfile.profile!.user;
       const result = missingSessionParameters(mockProfile.profile);
       expect(result).toContain("user");
     });
 
     it("should return missing password parameter", () => {
-      delete mockProfile.profile.password;
+      delete mockProfile.profile!.password;
       const result = missingSessionParameters(mockProfile.profile);
       expect(result).toContain("password");
     });
 
     it("should return missing protocol parameter", () => {
-      delete mockProfile.profile.protocol;
+      delete mockProfile.profile!.protocol;
       const result = missingSessionParameters(mockProfile.profile);
       expect(result).toContain("protocol");
     });
 
     it("should return multiple missing parameters", () => {
-      delete mockProfile.profile.host;
-      delete mockProfile.profile.user;
-      delete mockProfile.profile.password;
+      delete mockProfile.profile!.host;
+      delete mockProfile.profile!.user;
+      delete mockProfile.profile!.password;
       const result = missingSessionParameters(mockProfile.profile);
       expect(result).toContain("host");
       expect(result).toContain("user");
@@ -126,15 +130,17 @@ describe("profileUtils", () => {
     });
 
     it("should return undefined when no missing parameters and not unauthorized", async () => {
+      // @ts-expect-error - Partial mock for testing
       const result = await updateProfile(mockProfile, mockSessionTree);
       expect(result).toBeUndefined();
     });
 
     it("should prompt for credentials when user is missing", async () => {
-      delete mockProfile.profile.user;
+      delete mockProfile.profile!.user;
       const updatedProfile = { ...mockProfile, profile: { ...mockProfile.profile, user: "newuser" } };
       (ZoweVsCodeExtension.updateCredentials as jest.Mock) = jest.fn().mockResolvedValue(updatedProfile);
 
+      // @ts-expect-error - Partial mock for testing
       const result = await updateProfile(mockProfile, mockSessionTree);
 
       expect(ZoweVsCodeExtension.updateCredentials).toHaveBeenCalled();
@@ -142,10 +148,11 @@ describe("profileUtils", () => {
     });
 
     it("should prompt for credentials when password is missing", async () => {
-      delete mockProfile.profile.password;
+      delete mockProfile.profile!.password;
       const updatedProfile = { ...mockProfile, profile: { ...mockProfile.profile, password: "newpass" } };
       (ZoweVsCodeExtension.updateCredentials as jest.Mock) = jest.fn().mockResolvedValue(updatedProfile);
 
+      // @ts-expect-error - Partial mock for testing
       const result = await updateProfile(mockProfile, mockSessionTree);
 
       expect(ZoweVsCodeExtension.updateCredentials).toHaveBeenCalled();
@@ -157,6 +164,7 @@ describe("profileUtils", () => {
       const updatedProfile = { ...mockProfile };
       (ZoweVsCodeExtension.updateCredentials as jest.Mock) = jest.fn().mockResolvedValue(updatedProfile);
 
+      // @ts-expect-error - Partial mock for testing
       const result = await updateProfile(mockProfile, mockSessionTree);
 
       expect(ZoweVsCodeExtension.updateCredentials).toHaveBeenCalled();
@@ -164,11 +172,12 @@ describe("profileUtils", () => {
     });
 
     it("should show information message when other parameters are still missing after credential update", async () => {
-      delete mockProfile.profile.user;
-      delete mockProfile.profile.host;
+      delete mockProfile.profile!.user;
+      delete mockProfile.profile!.host;
       const updatedProfile = { ...mockProfile, profile: { ...mockProfile.profile, user: "newuser" } };
       (ZoweVsCodeExtension.updateCredentials as jest.Mock) = jest.fn().mockResolvedValue(updatedProfile);
 
+      // @ts-expect-error - Partial mock for testing
       const result = await updateProfile(mockProfile, mockSessionTree);
 
       expect(window.showInformationMessage).toHaveBeenCalledWith(
@@ -178,14 +187,15 @@ describe("profileUtils", () => {
     });
 
     it("should return profile when all missing parameters are resolved", async () => {
-      delete mockProfile.profile.user;
-      delete mockProfile.profile.password;
+      delete mockProfile.profile!.user;
+      delete mockProfile.profile!.password;
       const updatedProfile = {
         ...mockProfile,
         profile: { ...mockProfile.profile, user: "newuser", password: "newpass" },
       };
       (ZoweVsCodeExtension.updateCredentials as jest.Mock) = jest.fn().mockResolvedValue(updatedProfile);
 
+      // @ts-expect-error - Partial mock for testing
       const result = await updateProfile(mockProfile, mockSessionTree);
 
       expect(result).toEqual(updatedProfile);
@@ -193,9 +203,10 @@ describe("profileUtils", () => {
     });
 
     it("should handle user cancelling credential prompt", async () => {
-      delete mockProfile.profile.user;
+      delete mockProfile.profile!.user;
       (ZoweVsCodeExtension.updateCredentials as jest.Mock) = jest.fn().mockResolvedValue(null);
 
+      // @ts-expect-error - Partial mock for testing
       const result = await updateProfile(mockProfile, mockSessionTree);
 
       expect(result).toBeUndefined();

@@ -10,6 +10,7 @@
  */
 
 import type { WebviewToExtensionMessage, ExtensionToWebviewMessage } from "../../../../src/webviews/common/messages";
+import { createMockResourceContext } from "../../utils/__mocks__/commonMocks";
 
 describe("Webview Messages", () => {
   describe("WebviewToExtensionMessage", () => {
@@ -46,7 +47,7 @@ describe("Webview Messages", () => {
     it("should support showLogsForHyperlink message type", () => {
       const message: WebviewToExtensionMessage = {
         type: "showLogsForHyperlink",
-        resourceContext: {} as any,
+        resourceContext: createMockResourceContext(),
       };
 
       expect(message.type).toBe("showLogsForHyperlink");
@@ -58,7 +59,7 @@ describe("Webview Messages", () => {
     it("should support showDatasetForHyperlink message type", () => {
       const message: WebviewToExtensionMessage = {
         type: "showDatasetForHyperlink",
-        resourceContext: {} as any,
+        resourceContext: createMockResourceContext(),
         datasetName: "TEST.DATASET",
       };
 
@@ -71,7 +72,7 @@ describe("Webview Messages", () => {
     it("should support showUssFileForHyperlink message type", () => {
       const message: WebviewToExtensionMessage = {
         type: "showUssFileForHyperlink",
-        resourceContext: {} as any,
+        resourceContext: createMockResourceContext(),
         ussPath: "/u/test/file.txt",
       };
 

@@ -73,3 +73,16 @@ export function createMockSessionTree(isUnauthorized = false) {
     getIsUnauthorized: jest.fn().mockReturnValue(isUnauthorized),
   };
 }
+
+/**
+ * Creates a mock resource context for testing
+ */
+export function createMockResourceContext(overrides?: any) {
+  return {
+    session: {} as any,
+    profile: createMockProfile(),
+    regionName: "TESTREGION",
+    cicsplexName: "TESTPLEX",
+    ...overrides,
+  };
+}

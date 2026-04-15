@@ -18,6 +18,7 @@ import {
   promptCredentials,
 } from "../../../src/utils/profileUtils";
 import { ProfileManagement } from "../../../src/utils/profileManagement";
+import { createMockProfile, createMockSessionTree } from "./__mocks__/commonMocks";
 
 jest.mock("vscode");
 jest.mock("@zowe/zowe-explorer-api");
@@ -30,23 +31,9 @@ describe("profileUtils", () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    mockProfile = {
-      name: "testProfile",
-      type: "cics",
-      profile: {
-        host: "test.com",
-        port: 1234,
-        user: "testuser",
-        password: "testpass",
-        protocol: "https",
-      },
-      message: "",
-      failNotFound: false,
-    };
-
-    mockSessionTree = {
-      getIsUnauthorized: jest.fn().mockReturnValue(false),
-    };
+    // Use shared mock utilities for consistency and secure patterns
+    mockProfile = createMockProfile();
+    mockSessionTree = createMockSessionTree();
 
     (window.showInformationMessage as jest.Mock) = jest.fn();
   });

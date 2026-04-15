@@ -15,6 +15,7 @@ import { ProfileManagement } from "../../../src/utils/profileManagement";
 import { CICSExtensionError } from "../../../src/errors/CICSExtensionError";
 import * as resourceUtils from "../../../src/utils/resourceUtils";
 import * as plexUtils from "../../../src/utils/plexUtils";
+import { createMockProfile, createMockProfilesCache, createMockZoweAPI } from "./__mocks__/commonMocks";
 
 jest.mock("@zowe/zowe-explorer-api");
 jest.mock("@zowe/cics-for-zowe-sdk");
@@ -29,31 +30,10 @@ describe("ProfileManagement", () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    mockProfile = {
-      name: "testProfile",
-      type: "cics",
-      profile: {
-        host: "test.com",
-        port: 1234,
-        user: "testuser",
-        password: "testpass",
-        protocol: "https",
-      },
-      message: "",
-      failNotFound: false,
-    };
-
-    mockProfilesCache = {
-      refresh: jest.fn().mockResolvedValue(undefined),
-      getProfileInfo: jest.fn().mockResolvedValue({}),
-    };
-
-    mockZoweAPI = {
-      getExplorerExtenderApi: jest.fn().mockReturnValue({
-        getProfilesCache: jest.fn().mockReturnValue(mockProfilesCache),
-        initForZowe: jest.fn().mockResolvedValue(undefined),
-      }),
-    };
+    // Use shared mock utilities for consistency
+    mockProfile = createMockProfile();
+    mockProfilesCache = createMockProfilesCache();
+    mockZoweAPI = createMockZoweAPI(mockProfilesCache);
 
     (ZoweVsCodeExtension.getZoweExplorerApi as jest.Mock) = jest.fn().mockReturnValue(mockZoweAPI);
     (getCICSProfileDefinition as jest.Mock) = jest.fn().mockReturnValue({});
@@ -65,10 +45,19 @@ describe("ProfileManagement", () => {
       expect(ProfileManagement.apiDoesExist()).toBe(true);
     });
 
-    it("should return false when API does not exist", () => {
+    /**
+     * LIMITATION: This test cannot properly verify the false case due to static class initialization.
+     * ProfileManagement uses static initialization (line 23-24 in profileManagement.ts) which happens
+     * when the module is first imported. Once initialized, the static properties cannot be reset
+     * between tests without reloading the entire module.
+     *
+     * FUTURE IMPROVEMENT: Consider refactoring ProfileManagement to use dependency injection
+     * or a singleton pattern with a reset method to improve testability.
+     */
+    it("should return true even when mock returns null (static initialization limitation)", () => {
       (ZoweVsCodeExtension.getZoweExplorerApi as jest.Mock) = jest.fn().mockReturnValue(null);
-      // Need to reinitialize ProfileManagement to pick up the new mock
-      expect(ProfileManagement.apiDoesExist()).toBe(true); // Will still be true due to static initialization
+      // This will still return true because the static property was already initialized
+      expect(ProfileManagement.apiDoesExist()).toBe(true);
     });
   });
 

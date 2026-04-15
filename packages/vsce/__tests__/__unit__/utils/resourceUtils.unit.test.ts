@@ -246,7 +246,7 @@ describe("Resource Util requesters", () => {
     expect(getResourceMock).toHaveBeenCalledTimes(1);
   });
 
-  it("should handle error on retry", async () => {
+  it("should handle error when both initial request and retry fail with 401", async () => {
     getResourceMock.mockReset();
 
     const getErrorCodeMock = jest.spyOn(errorUtils, "getErrorCode");
@@ -273,6 +273,64 @@ describe("Resource Util requesters", () => {
 
     expect(getErrorCodeMock).toHaveBeenCalledTimes(1);
     expect(error).toBeDefined();
+    expect(getResourceMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("should handle error when session token is undefined on retry", async () => {
+    getResourceMock.mockReset();
+
+    const getErrorCodeMock = jest.spyOn(errorUtils, "getErrorCode");
+    const errorToThrow = new RestClientError({ msg: "", source: "http", errorCode: "401" });
+
+    const fakeCICSSession = new CICSSession(profile.profile!);
+    fakeCICSSession.ISession.tokenValue = undefined;
+    jest.spyOn(SessionHandler.prototype, "getSession").mockReturnValueOnce(fakeCICSSession);
+
+    getResourceMock.mockImplementationOnce(() => {
+      throw errorToThrow;
+    });
+
+    let error;
+
+    try {
+      await runGetResource({
+        profileName: "MYPROF",
+        resourceName: "MYRES",
+      });
+    } catch (err) {
+      error = err;
+    }
+
+    expect(getErrorCodeMock).toHaveBeenCalledTimes(1);
+    expect(error).toBeDefined();
+    // Should not retry when token is undefined
+    expect(getResourceMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("should handle error when retry succeeds after 401", async () => {
+    getResourceMock.mockReset();
+
+    const getErrorCodeMock = jest.spyOn(errorUtils, "getErrorCode");
+    const errorToThrow = new RestClientError({ msg: "", source: "http", errorCode: "401" });
+
+    const fakeCICSSession = new CICSSession(profile.profile!);
+    fakeCICSSession.ISession.tokenValue = '""';
+    jest.spyOn(SessionHandler.prototype, "getSession").mockReturnValueOnce(fakeCICSSession);
+
+    // First call throws 401, second call succeeds
+    getResourceMock
+      .mockImplementationOnce(() => {
+        throw errorToThrow;
+      })
+      .mockResolvedValueOnce(successResponse);
+
+    const result = await runGetResource({
+      profileName: "MYPROF",
+      resourceName: "MYRES",
+    });
+
+    expect(getErrorCodeMock).toHaveBeenCalledTimes(1);
+    expect(result).toEqual(successResponse);
     expect(getResourceMock).toHaveBeenCalledTimes(2);
   });
 });
@@ -442,24 +500,32 @@ describe("getResourceNameFromCriteria error handling", () => {
     const errorToThrow = new Error("Test error");
     getResourceMock.mockRejectedValue(errorToThrow);
 
+    const expectedResourceName = "TESTPROG";
+
     try {
       await runGetResource({
         profileName: "MYPROF",
         resourceName: "MYRES",
         params: {
-          criteria: "PROGRAM=TESTPROG",
+          criteria: `PROGRAM=${expectedResourceName}`,
         },
       });
       fail("Should have thrown an error");
     } catch (error: any) {
       expect(error).toBeDefined();
-      expect(error.cicsExtensionError.resourceName).toBe("TESTPROG");
+      expect(error.cicsExtensionError).toBeDefined();
+      expect(error.cicsExtensionError.resourceName).toBe(expectedResourceName);
+      // Verify the extraction logic worked correctly
+      expect(error.cicsExtensionError.resourceName).toMatch(/^[A-Z0-9]+$/);
     }
   });
 
   it("should extract multiple resource names from OR criteria in error message", async () => {
     const errorToThrow = new Error("Test error");
     getResourceMock.mockRejectedValue(errorToThrow);
+
+    const expectedNames = ["PROG1", "PROG2", "PROG3"];
+    const expectedResourceName = expectedNames.join(", ");
 
     try {
       await runGetResource({
@@ -472,13 +538,21 @@ describe("getResourceNameFromCriteria error handling", () => {
       fail("Should have thrown an error");
     } catch (error: any) {
       expect(error).toBeDefined();
-      expect(error.cicsExtensionError.resourceName).toBe("PROG1, PROG2, PROG3");
+      expect(error.cicsExtensionError).toBeDefined();
+      expect(error.cicsExtensionError.resourceName).toBe(expectedResourceName);
+      // Verify all names were extracted
+      expectedNames.forEach(name => {
+        expect(error.cicsExtensionError.resourceName).toContain(name);
+      });
     }
   });
 
   it("should handle criteria with spaces around equals sign", async () => {
     const errorToThrow = new Error("Test error");
     getResourceMock.mockRejectedValue(errorToThrow);
+
+    const expectedNames = ["PROG1", "PROG2"];
+    const expectedResourceName = expectedNames.join(", ");
 
     try {
       await runGetResource({
@@ -491,7 +565,14 @@ describe("getResourceNameFromCriteria error handling", () => {
       fail("Should have thrown an error");
     } catch (error: any) {
       expect(error).toBeDefined();
-      expect(error.cicsExtensionError.resourceName).toBe("PROG1, PROG2");
+      expect(error.cicsExtensionError).toBeDefined();
+      expect(error.cicsExtensionError.resourceName).toBe(expectedResourceName);
+      // Verify extraction handles spaces in criteria correctly (extracts clean names)
+      expectedNames.forEach(name => {
+        expect(error.cicsExtensionError.resourceName).toContain(name);
+      });
+      // Verify the format is "NAME1, NAME2" (comma-space separated)
+      expect(error.cicsExtensionError.resourceName).toMatch(/^[A-Z0-9]+(, [A-Z0-9]+)*$/);
     }
   });
 
@@ -508,6 +589,7 @@ describe("getResourceNameFromCriteria error handling", () => {
       fail("Should have thrown an error");
     } catch (error: any) {
       expect(error).toBeDefined();
+      expect(error.cicsExtensionError).toBeDefined();
       expect(error.cicsExtensionError.resourceName).toBeUndefined();
     }
   });
@@ -518,6 +600,9 @@ describe("getResourceNameFromCriteria error handling", () => {
     
     const errorToThrow = new Error("PUT error");
     putResourceMock.mockRejectedValue(errorToThrow);
+
+    const expectedNames = ["TRN1", "TRN2"];
+    const expectedResourceName = expectedNames.join(", ");
 
     try {
       await runPutResource(
@@ -535,7 +620,12 @@ describe("getResourceNameFromCriteria error handling", () => {
       fail("Should have thrown an error");
     } catch (error: any) {
       expect(error).toBeDefined();
-      expect(error.cicsExtensionError.resourceName).toBe("TRN1, TRN2");
+      expect(error.cicsExtensionError).toBeDefined();
+      expect(error.cicsExtensionError.resourceName).toBe(expectedResourceName);
+      // Verify both transaction names were extracted
+      expectedNames.forEach(name => {
+        expect(error.cicsExtensionError.resourceName).toContain(name);
+      });
     }
   });
 });

@@ -62,20 +62,23 @@ export function getCloseLocalFileCommand(tree: CICSTree, treeview: TreeView<any>
 
         const nodesToRefresh = new Set();
         const errors: Array<{ node: CICSResourceContainerNode<ILocalFile>; error: any }> = [];
+        let successCount = 0;
 
         for (let i = 0; i < nodes.length; i++) {
           const node = nodes[i] as CICSResourceContainerNode<ILocalFile>;
-          progress.report({
-            message: l10n.t("{0} of {1}", i + 1, nodes.length),
-            increment: (1 / nodes.length) * constants.PERCENTAGE_MAX,
-          });
+          const fileName = node.getContainedResource().resource.attributes.file;
 
           try {
+            progress.report({
+              message: l10n.t("Closing {0} ({1} of {2})", fileName, i + 1, nodes.length),
+              increment: (1 / nodes.length) * constants.PERCENTAGE_MAX,
+            });
+
             const profile = SessionHandler.getInstance().getProfile(node.getProfileName());
             const session = SessionHandler.getInstance().getSession(profile);
 
             const response = await closeLocalFile(session, {
-              name: node.getContainedResource().resource.attributes.file,
+              name: fileName,
               regionName: node.regionName ?? node.getContainedResource().resource.attributes.eyu_cicsname,
               cicsPlex: node.cicsplexName,
               busy: busyDecision,
@@ -83,24 +86,30 @@ export function getCloseLocalFileCommand(tree: CICSTree, treeview: TreeView<any>
 
             nodesToRefresh.add(node.getParent());
             evaluateTreeNodes(node, response, node.getContainedResource().meta);
+            successCount++;
           } catch (error) {
             errors.push({ node, error });
             CICSErrorHandler.handleCMCIRestError(error);
+            // Update progress to indicate failure
+            progress.report({
+              message: l10n.t("Failed to close {0} ({1} of {2})", fileName, i + 1, nodes.length),
+            });
           }
         }
 
-        nodesToRefresh.forEach((v) => {
-          tree.refresh(v);
+        nodesToRefresh.forEach((parentNode) => {
+          tree.refresh(parentNode);
         });
 
-        // Show summary if there were any errors
+        // Show summary message
         if (errors.length > 0) {
-          const successCount = nodes.length - errors.length;
           const errorMessage =
             errors.length === nodes.length
               ? l10n.t("Failed to close all {0} local file(s)", nodes.length)
               : l10n.t("Closed {0} of {1} local file(s). {2} failed.", successCount, nodes.length, errors.length);
           window.showWarningMessage(errorMessage);
+        } else if (nodes.length > 1) {
+          window.showInformationMessage(l10n.t("Successfully closed {0} local file(s)", successCount));
         }
       }
     );

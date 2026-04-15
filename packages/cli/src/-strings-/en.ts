@@ -282,6 +282,7 @@ export default {
         },
         MESSAGES: {
           SUCCESS: "The local file '%s' was closed successfully.",
+          PROGRESS: "Closing local file from CICS",
         },
         EXAMPLES: {
           EX1: "Close a local file named TESTFILE from the region named MYREGION",

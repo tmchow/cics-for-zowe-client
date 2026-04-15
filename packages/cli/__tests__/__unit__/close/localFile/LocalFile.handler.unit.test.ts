@@ -156,6 +156,54 @@ describe("CloseLocalFileHandler", () => {
       }
     );
   });
+  it("should call the closeLocalFile api with lowercase busy parameter (case-insensitive)", async () => {
+    const handler = new LocalFileHandler();
+
+    const commandParameters = { ...DEFAULT_PARAMETERS };
+    commandParameters.arguments = {
+      ...commandParameters.arguments,
+      fileName,
+      regionName,
+      host,
+      port,
+      user,
+      password,
+      protocol,
+      rejectUnauthorized,
+      busy: "wait", // lowercase
+    };
+
+    await handler.process(commandParameters);
+
+    expect(functionSpy).toHaveBeenCalledTimes(1);
+
+    expect(functionSpy).toHaveBeenCalledWith(
+      new Session({
+        type: "basic",
+        hostname: PROFILE_MAP.host,
+        port: PROFILE_MAP.port,
+        user: PROFILE_MAP.user,
+        password: PROFILE_MAP.password,
+        rejectUnauthorized,
+        protocol,
+        _authCache: {
+          availableCreds: {
+            base64EncodedAuth: "c29tZW9uZTpzb21lc2VjcmV0",
+            password: "somesecret",
+            user: "someone",
+          },
+          didUserSetAuthOrder: false,
+          topDefaultAuth: "basic",
+        },
+        authTypeOrder: ["basic", "token", "bearer", "cert-pem"],
+      }),
+      {
+        name: fileName,
+        regionName,
+        busy: "wait", // Should be passed as-is; SDK will handle uppercase conversion
+      }
+    );
+  });
 });
 
 

@@ -78,6 +78,19 @@ describe("CMCI - Close local file", () => {
       expect(error.message).toContain("Invalid BUSY parameter value");
       expect(error.message).toContain("WAIT, NOWAIT, FORCE");
     });
+
+    it("should throw an error if file name exceeds maximum length", async () => {
+      closeParms.name = "TOOLONGNAME"; // 11 characters, exceeds 8 char limit
+      try {
+        response = await closeLocalFile(dummySession, closeParms);
+      } catch (err) {
+        error = err;
+      }
+      expect(response).toBeUndefined();
+      expect(error).toBeDefined();
+      expect(error.message).toContain("exceeds maximum length");
+      expect(error.message).toContain("8 characters");
+    });
   });
 
   describe("success scenarios", () => {
@@ -238,6 +251,58 @@ describe("CMCI - Close local file", () => {
 
       response = await closeLocalFile(dummySession, closeParms);
       expect(response).toContain(content);
+      expect(closeSpy).toHaveBeenCalledWith(dummySession, endPoint, [], requestBody);
+    });
+
+    it("should handle empty string BUSY parameter gracefully", async () => {
+      closeParms.busy = ""; // Empty string should be ignored
+      endPoint =
+        "/" +
+        CicsCmciConstants.CICS_SYSTEM_MANAGEMENT +
+        "/" +
+        CicsCmciConstants.CICS_CMCI_LOCAL_FILE +
+        "/" +
+        region +
+        `?CRITERIA=(FILE%3D${closeParms.name})`;
+      requestBody = {
+        request: {
+          action: {
+            $: {
+              name: "CLOSE",
+            },
+          },
+        },
+      };
+
+      response = await closeLocalFile(dummySession, closeParms);
+      expect(response).toContain(content);
+      // Verify that no BUSY parameter was sent in the request body
+      expect(closeSpy).toHaveBeenCalledWith(dummySession, endPoint, [], requestBody);
+    });
+
+    it("should handle whitespace-only BUSY parameter gracefully", async () => {
+      closeParms.busy = "   "; // Whitespace only should be ignored
+      endPoint =
+        "/" +
+        CicsCmciConstants.CICS_SYSTEM_MANAGEMENT +
+        "/" +
+        CicsCmciConstants.CICS_CMCI_LOCAL_FILE +
+        "/" +
+        region +
+        `?CRITERIA=(FILE%3D${closeParms.name})`;
+      requestBody = {
+        request: {
+          action: {
+            $: {
+              name: "CLOSE",
+            },
+          },
+        },
+      };
+
+      response = await closeLocalFile(dummySession, closeParms);
+      expect(response).toContain(content);
+      // Verify that no BUSY parameter was sent in the request body
       expect(closeSpy).toHaveBeenCalledWith(dummySession, endPoint, [], requestBody);
     });
   });

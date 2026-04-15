@@ -25,14 +25,24 @@ const strings = (require("../../-strings-/en").default as typeof i18nTypings).CL
  * @implements {ICommandHandler}
  */
 export default class LocalFileHandler extends CicsBaseHandler {
+  /**
+   * Process the command to close a CICS local file
+   * @param {IHandlerParameters} params - Command handler parameters
+   * @param {AbstractSession} session - The session to use for the CMCI request
+   * @returns {Promise<ICMCIApiResponse>} The CMCI API response
+   * @throws {ImperativeError} Various errors from validation or CMCI request failures
+   * @memberof LocalFileHandler
+   */
   public async processWithSession(params: IHandlerParameters, session: AbstractSession): Promise<ICMCIApiResponse> {
     const status: ITaskWithStatus = {
-      statusMessage: "Closing local file from CICS",
+      statusMessage: strings.MESSAGES.PROGRESS,
       percentComplete: 0,
       stageName: TaskStage.IN_PROGRESS,
     };
     params.response.progress.startBar({ task: status });
 
+    // Error handling is managed by the base handler (CicsBaseHandler)
+    // which catches and formats errors appropriately for CLI output
     const response = await closeLocalFile(session, {
       name: params.arguments.fileName,
       regionName: params.arguments.regionName,

@@ -16,6 +16,9 @@ import type i18nTypings from "../../-strings-/en";
 // Does not use the import in anticipation of some internationalization work to be done later.
 const strings = (require("../../-strings-/en").default as typeof i18nTypings).CLOSE.RESOURCES.LOCALFILE;
 
+// Valid BUSY parameter values - kept in sync with SDK constants
+const BUSY_VALUES = ["WAIT", "NOWAIT", "FORCE"];
+
 export const LocalFileDefinition: ICommandDefinition = {
   name: "local-file",
   aliases: ["lf"],
@@ -46,7 +49,7 @@ export const LocalFileDefinition: ICommandDefinition = {
       description: strings.OPTIONS.BUSY,
       type: "string",
       allowableValues: {
-        values: ["WAIT", "NOWAIT", "FORCE"],
+        values: [...BUSY_VALUES],
         caseSensitive: false,
       },
     },

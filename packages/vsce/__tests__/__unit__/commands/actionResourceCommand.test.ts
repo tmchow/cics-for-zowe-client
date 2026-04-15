@@ -9,36 +9,94 @@
  *
  */
 
-import { window, ProgressLocation } from "vscode";
+import { window, ProgressLocation, type Progress, type CancellationToken, EventEmitter } from "vscode";
 import { actionTreeItem } from "../../../src/commands/actionResourceCommand";
 import { setResource } from "../../../src/commands/setResource";
 import { CICSErrorHandler } from "../../../src/errors/CICSErrorHandler";
 import { pollForCompleteAction } from "../../../src/utils/resourceUtils";
 import { evaluateTreeNodes } from "../../../src/utils/treeUtils";
 import { ProgramMeta } from "../../../src/doc/meta/program.meta";
+import { CICSTree } from "../../../src/trees/CICSTree";
+import { CICSResourceContainerNode } from "../../../src/trees/CICSResourceContainerNode";
+import type { IResource } from "@zowe/cics-for-zowe-explorer-api";
+import type { imperative } from "@zowe/zowe-explorer-api";
 
 jest.mock("vscode");
 jest.mock("../../../src/commands/setResource");
 jest.mock("../../../src/errors/CICSErrorHandler");
 jest.mock("../../../src/utils/resourceUtils");
 jest.mock("../../../src/utils/treeUtils");
+jest.mock("../../../src/utils/PersistentStorage", () => ({
+  default: {
+    getLoadedCICSProfiles: jest.fn().mockReturnValue([]),
+    getCriteria: jest.fn().mockReturnValue(""),
+  },
+}));
+jest.mock("../../../src/utils/profileManagement");
+jest.mock("../../../src/resources/SessionHandler");
 
 describe("actionResourceCommand", () => {
-  let mockNode: any;
-  let mockTree: any;
-  let mockParentNode: any;
-  let mockProgress: any;
-  let mockToken: any;
+  let mockNode: CICSResourceContainerNode<IResource>;
+  let mockTree: CICSTree;
+  let mockParentNode: CICSResourceContainerNode<IResource>;
+  let mockProgress: Progress<{ message?: string; increment?: number }>;
+  let mockToken: CancellationToken;
+  let mockProfile: imperative.IProfileLoaded;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
+    // Create mock profile
+    mockProfile = {
+      name: "testProfile",
+      type: "cics",
+      profile: {},
+      message: "",
+      failNotFound: false,
+    } as imperative.IProfileLoaded;
+
+    // Create mock tree - use object literal with proper typing instead of instantiating
+    const mockEventEmitter = new EventEmitter<any>();
+    mockEventEmitter.fire = jest.fn();
+    
+    mockTree = {
+      refresh: jest.fn(),
+      _onDidChangeTreeData: mockEventEmitter,
+      loadedProfiles: [],
+      getLoadedProfiles: jest.fn().mockReturnValue([]),
+      getSessionNodeForProfile: jest.fn(),
+      refreshLoadedProfiles: jest.fn(),
+      clearLoadedProfiles: jest.fn(),
+      loadStoredProfileNames: jest.fn(),
+      manageProfile: jest.fn(),
+      addProfile: jest.fn(),
+      removeSession: jest.fn(),
+      getTreeItem: jest.fn(),
+      getChildren: jest.fn(),
+      getParent: jest.fn(),
+      getConfigLocationPrompt: jest.fn(),
+      getProfileIcon: jest.fn(),
+    } as unknown as CICSTree;
+
+    // Create mock parent node
     mockParentNode = {
       refresh: jest.fn(),
-    };
+      getProfileName: jest.fn().mockReturnValue("testProfile"),
+      getProfile: jest.fn().mockReturnValue(mockProfile),
+      getParent: jest.fn(),
+      getSession: jest.fn(),
+      getLabel: jest.fn(),
+      regionName: "TESTREGION",
+      cicsplexName: "TESTPLEX",
+    } as unknown as CICSResourceContainerNode<IResource>;
 
+    // Create mock node with proper typing
     mockNode = {
       getProfileName: jest.fn().mockReturnValue("testProfile"),
+      getProfile: jest.fn().mockReturnValue(mockProfile),
+      getParent: jest.fn().mockReturnValue(mockParentNode),
+      getSession: jest.fn(),
+      getLabel: jest.fn(),
       regionName: "TESTREGION",
       cicsplexName: "TESTPLEX",
       getContainedResource: jest.fn().mockReturnValue({
@@ -51,23 +109,16 @@ describe("actionResourceCommand", () => {
         },
       }),
       getContainedResourceName: jest.fn().mockReturnValue("TESTPROG"),
-      getParent: jest.fn().mockReturnValue(mockParentNode),
-    };
-
-    mockTree = {
-      refresh: jest.fn(),
-      _onDidChangeTreeData: {
-        fire: jest.fn(),
-      },
-    };
+    } as unknown as CICSResourceContainerNode<IResource>;
 
     mockProgress = {
       report: jest.fn(),
-    };
+    } as Progress<{ message?: string; increment?: number }>;
 
     mockToken = {
       onCancellationRequested: jest.fn(),
-    };
+      isCancellationRequested: false,
+    } as CancellationToken;
 
     (window.withProgress as jest.Mock) = jest.fn().mockImplementation(async (options, callback) => {
       return callback(mockProgress, mockToken);
@@ -120,7 +171,7 @@ describe("actionResourceCommand", () => {
       const mockNode2 = {
         ...mockNode,
         getContainedResourceName: jest.fn().mockReturnValue("TESTPROG2"),
-      };
+      } as unknown as CICSResourceContainerNode<IResource>;
 
       await actionTreeItem({
         action: "DISABLE",
@@ -134,7 +185,9 @@ describe("actionResourceCommand", () => {
     });
 
     it("should report progress for each node", async () => {
-      const nodes = [mockNode, { ...mockNode }, { ...mockNode }];
+      const mockNode2 = { ...mockNode } as unknown as CICSResourceContainerNode<IResource>;
+      const mockNode3 = { ...mockNode } as unknown as CICSResourceContainerNode<IResource>;
+      const nodes = [mockNode, mockNode2, mockNode3];
 
       await actionTreeItem({
         action: "ENABLE",
@@ -257,7 +310,7 @@ describe("actionResourceCommand", () => {
       const mockNode2 = {
         ...mockNode,
         getContainedResourceName: jest.fn().mockReturnValue("TESTPROG2"),
-      };
+      } as unknown as CICSResourceContainerNode<IResource>;
 
       (setResource as jest.Mock)
         .mockRejectedValueOnce(new Error("Test error"))
@@ -278,7 +331,7 @@ describe("actionResourceCommand", () => {
       const mockNode2 = {
         ...mockNode,
         getParent: jest.fn().mockReturnValue(mockParentNode),
-      };
+      } as unknown as CICSResourceContainerNode<IResource>;
 
       await actionTreeItem({
         action: "ENABLE",
@@ -291,7 +344,7 @@ describe("actionResourceCommand", () => {
     });
 
     it("should handle different action types", async () => {
-      const actions = ["ENABLE", "DISABLE", "NEWCOPY", "PHASEIN"] as const;
+      const actions: Array<"ENABLE" | "DISABLE" | "NEWCOPY" | "PHASEIN"> = ["ENABLE", "DISABLE", "NEWCOPY", "PHASEIN"];
 
       for (const action of actions) {
         jest.clearAllMocks();
